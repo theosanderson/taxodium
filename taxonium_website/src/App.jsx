@@ -220,20 +220,26 @@ function App() {
             )}
           </h1>
           <div className="flex items-center">
-            {window.screen.width >= 600 && ( // Hide the menu on mobile
-              <Select
-                value={new URL(window.location.href).pathname.substring(1)}
-                onChange={(e) => setSelectedTree(e.target.value)}
-                className={"mr-4 !bg-gray-50 ml-4"}
-              >
-                <option value="">Select a tree</option>
-                {Object.entries(treeConfig).map(([path, config]) => (
-                  <option key={path} value={path}>
-                    {path}
-                  </option>
-                ))}
-              </Select>
-            )}
+            {window.screen.width >= 600 &&
+              (!new URL(window.location.href).pathname.substring(1) ||
+                treeConfig
+                  .map((x) => x[0])
+                  .contains(
+                    new URL(window.location.href).pathname.substring(1)
+                  )) && ( // Hide the menu on mobile
+                <Select
+                  value={new URL(window.location.href).pathname.substring(1)}
+                  onChange={(e) => setSelectedTree(e.target.value)}
+                  className={"mr-4 !bg-gray-50 ml-4"}
+                >
+                  <option value="">Select a tree</option>
+                  {Object.entries(treeConfig).map(([path, config]) => (
+                    <option key={path} value={path}>
+                      {path}
+                    </option>
+                  ))}
+                </Select>
+              )}
             <button
               onClick={() => setAboutEnabled(true)}
               className="text-white font-bold hover:underline flex items-center"
