@@ -10,6 +10,33 @@ import { useMemo, useCallback } from "react";
 import useTreenomeLayers from "./useTreenomeLayers";
 import getSVGfunction from "../utils/deckglToSvg";
 
+// Function to calculate "nice" tick values
+const generateNiceTicks = (min, max, maxTicks) => {
+  const range = max - min;
+  const roughTickSize = range / (maxTicks - 1);
+  const orderOfMagnitude = Math.floor(Math.log10(roughTickSize));
+  const pow10 = Math.pow(10, orderOfMagnitude);
+
+  const possibleTickSizes = [1, 2, 5, 10];
+  let tickSize = possibleTickSizes[0] * pow10;
+  for (let i = 0; i < possibleTickSizes.length; i++) {
+    tickSize = possibleTickSizes[i] * pow10;
+    if (range / tickSize <= maxTicks) {
+      break;
+    }
+  }
+
+  const niceMin = Math.floor(min / tickSize) * tickSize;
+  const niceMax = Math.ceil(max / tickSize) * tickSize;
+
+  const ticks = [];
+  for (let x = niceMin; x <= niceMax; x += tickSize) {
+    ticks.push(x);
+  }
+
+  return ticks;
+};
+
 const getKeyStuff = (getNodeColorField, colorByField, dataset, toRGB) => {
   const counts = {};
   for (const node of dataset.nodes) {
@@ -160,10 +187,6 @@ const useLayers = ({
     getPosition: (d) => [getX(d), d.y],
     getFillColor: (d) => toRGB(getNodeColorField(d, detailed_data)),
     getRadius: settings.nodeSize,
-    // radius in pixels
-    // we had to get rid of the below because it was messing up the genotype colours
-    // getRadius: (d) =>
-    //  getNodeColorField(d, detailed_data) === hoveredKey ? 4 : 3,
     getLineColor: [100, 100, 100],
     opacity: settings.opacity,
     stroked: data.data.nodes && data.data.nodes.length < 3000,
@@ -193,9 +216,7 @@ const useLayers = ({
           selectedDetails.nodeDetails.node_id === d.node_id
         ? 3.5
         : 1,
-
     onHover: (info) => setHoverInfo(info),
-
     modelMatrix: modelMatrix,
     updateTriggers: {
       getSourcePosition: [detailed_data, xType],
@@ -285,16 +306,12 @@ const useLayers = ({
       opacity: 1,
       getRadius: 6,
       radiusUnits: "pixels",
-
       id: "main-selected",
       filled: false,
       stroked: true,
       modelMatrix,
-
       getLineColor: [0, 0, 0],
-      getPosition: (d) => {
-        return [d[xType], d.y];
-      },
+      getPosition: (d) => [d[xType], d.y],
       lineWidthUnits: "pixels",
       lineWidthScale: 2,
     };
@@ -306,16 +323,12 @@ const useLayers = ({
       opacity: 0.3,
       getRadius: 4,
       radiusUnits: "pixels",
-
       id: "main-hovered",
       filled: false,
       stroked: true,
       modelMatrix,
-
       getLineColor: [0, 0, 0],
-      getPosition: (d) => {
-        return [d[xType], d.y];
-      },
+      getPosition: (d) => [d[xType], d.y],
       lineWidthUnits: "pixels",
       lineWidthScale: 2,
     };
@@ -327,12 +340,10 @@ const useLayers = ({
       data: clade_data,
       getPosition: (d) => [getX(d), d.y],
       getText: (d) => d.clades[clade_accessor],
-
       getColor: settings.cladeLabelColor,
       getAngle: 0,
       fontFamily: "Roboto, sans-serif",
       fontWeight: 700,
-
       billboard: true,
       getTextAnchor: "end",
       getAlignmentBaseline: "center",
@@ -377,10 +388,8 @@ const useLayers = ({
       ),
       getPosition: (d) => [getX(d), d.y],
       getText: (d) => d[config.name_accessor],
-
       getColor: settings.terminalNodeLabelColor,
       getAngle: 0,
-
       billboard: true,
       getTextAnchor: "start",
       getAlignmentBaseline: "center",
@@ -399,10 +408,8 @@ const useLayers = ({
     getPolygonOffset: ({ layerIndex }) => [0, -4000],
     getPosition: (d) => [getX(d), d.y],
     getFillColor: (d) => toRGB(getNodeColorField(d, base_data)),
-    // radius in pixels
     getRadius: 2,
     getLineColor: [100, 100, 100],
-
     opacity: 0.6,
     radiusUnits: "pixels",
     onHover: (info) => setHoverInfo(info),
@@ -434,7 +441,6 @@ const useLayers = ({
     getSourcePosition: (d) => [d.parent_x, d.y],
     getTargetPosition: (d) => [d.parent_x, d.parent_y],
     getColor: lineColor,
-
     updateTriggers: {
       getSourcePosition: [base_data, xType],
       getTargetPosition: [base_data, xType],
@@ -451,7 +457,6 @@ const useLayers = ({
     opacity: 0.3,
     filled: true,
     getPolygonOffset: ({ layerIndex }) => [0, -2000],
-
     getFillColor: (d) => [255, 255, 255],
   };
 
@@ -478,12 +483,10 @@ const useLayers = ({
     const data = searchResults[spec.key]
       ? searchResults[spec.key].result.data
       : [];
-
     const lineColor = search.getLineColor(i);
 
     return {
       layerType: "ScatterplotLayer",
-
       data: data,
       id: "main-search-scatter-" + spec.key,
       getPosition: (d) => [d[xType], d.y],
@@ -526,7 +529,6 @@ const useLayers = ({
       radiusUnits: "pixels",
       lineWidthUnits: "pixels",
       stroked: true,
-
       wireframe: true,
       getLineWidth: 1,
       filled: false,
@@ -534,11 +536,96 @@ const useLayers = ({
       updateTriggers: { getPosition: [xType] },
     };
   });
-  layers.push(...search_layers, ...search_mini_layers);
 
+  layers.push(...search_layers, ...search_mini_layers);
   layers.push(minimap_polygon_background);
   layers.push(minimap_line_horiz, minimap_line_vert, minimap_scatter);
   layers.push(minimap_bound_polygon);
+
+  // Add x-axis layers with intelligent tick values
+  const xAxisLayers = useMemo(() => {
+    // Determine x-axis position
+    const xAxisY =
+      viewState.min_y < -1000
+        ? -1000
+        : viewState.max_y - (viewState.max_y - viewState.min_y) * 0.05;
+
+    // Determine x-axis range
+    const xAxisMinX = viewState.min_x;
+    const xAxisMaxX = viewState.max_x;
+
+    // Decide on the maximum number of ticks
+    const maxTicks = 10;
+
+    // Generate nice tick positions
+    const tickPositions = generateNiceTicks(xAxisMinX, xAxisMaxX, maxTicks);
+
+    // Axis line layer
+    const xAxisLineLayer = {
+      layerType: "LineLayer",
+      id: "x-axis-line",
+      data: [
+        {
+          sourcePosition: [tickPositions[0], xAxisY],
+          targetPosition: [tickPositions[tickPositions.length - 1], xAxisY],
+        },
+      ],
+      getSourcePosition: (d) => d.sourcePosition,
+      getTargetPosition: (d) => d.targetPosition,
+      getColor: [0, 0, 0],
+      getWidth: 2,
+      widthUnits: "pixels",
+      modelMatrix: modelMatrix,
+      updateTriggers: {
+        getSourcePosition: [tickPositions[0], xAxisY],
+        getTargetPosition: [tickPositions[tickPositions.length - 1], xAxisY],
+      },
+    };
+
+    // Tick marks layer
+    const xAxisTickMarksLayer = {
+      layerType: "LineLayer",
+      id: "x-axis-ticks",
+      data: tickPositions.map((x) => ({
+        sourcePosition: [x, xAxisY],
+        targetPosition: [x, xAxisY - 10], // Adjust the tick length as needed
+      })),
+      getSourcePosition: (d) => d.sourcePosition,
+      getTargetPosition: (d) => d.targetPosition,
+      getColor: [0, 0, 0],
+      getWidth: 1,
+      widthUnits: "pixels",
+      modelMatrix: modelMatrix,
+      updateTriggers: {
+        data: [tickPositions, xAxisY],
+      },
+    };
+
+    // Tick labels layer
+    const xAxisLabelsLayer = {
+      layerType: "TextLayer",
+      id: "x-axis-labels",
+      data: tickPositions.map((x) => ({
+        position: [x, xAxisY - 15], // Position labels below the tick marks
+        text: x.toFixed(2), // Format the x-value as needed
+      })),
+      getPosition: (d) => d.position,
+      getText: (d) => d.text,
+      getColor: [0, 0, 0],
+      getSize: 12,
+      getTextAnchor: "middle",
+      getAlignmentBaseline: "top",
+      modelMatrix: modelMatrix,
+      updateTriggers: {
+        data: [tickPositions, xAxisY],
+      },
+    };
+
+    return [xAxisLineLayer, xAxisTickMarksLayer, xAxisLabelsLayer];
+  }, [viewState.min_x, viewState.max_x, viewState.min_y, modelMatrix]);
+
+  // Add the x-axis layers to the layers array
+  layers.push(...xAxisLayers);
 
   const layerFilter = useCallback(
     ({ layer, viewport, renderPass }) => {
@@ -552,7 +639,8 @@ const useLayers = ({
           viewport.id === "browser-main") ||
         (layer.id.startsWith("browser-fillin") &&
           viewport.id === "browser-main" &&
-          isCurrentlyOutsideBounds);
+          isCurrentlyOutsideBounds) ||
+        (layer.id.startsWith("x-axis") && viewport.id === "main");
 
       return first_bit;
     },
