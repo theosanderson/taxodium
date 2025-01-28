@@ -233,6 +233,21 @@ const useLayers = ({
       data: detailed_scatter_data,
     };
 
+    const key_hover_layer = hoveredKey
+      ? {
+          layerType: "ScatterplotLayer",
+          ...scatter_layer_common_props,
+          id: "main-scatter-key-hover",
+          data: detailed_scatter_data.filter(
+            (d) => getNodeColorField(d, detailed_data) === hoveredKey
+          ),
+          getRadius: settings.nodeSize + 1,
+          // stroked: true,
+          getLineColor: [0, 0, 0],
+          getLineWidth: 0.5,
+        }
+      : null;
+
     const pretty_stroke_background_layer = settings.prettyStroke.enabled
       ? {
           ...main_scatter_layer,
@@ -348,9 +363,11 @@ const useLayers = ({
       main_line_layer2,
       fillin_line_layer,
       fillin_line_layer2,
+
       pretty_stroke_background_layer,
       main_scatter_layer,
       fillin_scatter_layer,
+      key_hover_layer,
       clade_label_layer,
       selectedLayer,
       hoveredLayer
