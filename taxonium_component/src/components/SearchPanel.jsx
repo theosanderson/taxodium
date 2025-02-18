@@ -18,6 +18,8 @@ import classNames from "classnames";
 
 import SearchDisplayToggle from "./SearchDisplayToggle";
 
+import SNPOutputModal from "./snpModal";
+
 const prettify_x_types = { x_dist: "Distance", x_time: "Time" };
 
 const formatNumber = (num) => {
@@ -72,6 +74,14 @@ function SearchPanel({
   }, [selectedDetails.nodeDetails]);
 
   const [listOutputModalOpen, setListOutputModalOpen] = useState(false);
+  const [snpSearchModalOpen, setSnpSearchModalOpen] = useState(false);
+  const [showSNPButton, setShowSNPButton] = useState(false);
+  useEffect(() => {
+    // Check if the current URL includes "api.cov2tree.org"
+    if (window.location.href.includes("api.cov2tree.org")) {
+      setShowSNPButton(true);
+    }
+  }, []);
 
   const handleDownloadJson = () => {
     if (selectedDetails.nodeDetails) {
@@ -418,6 +428,22 @@ function SearchPanel({
             <RiAddCircleLine className="mr-1 h-4 w-4 text-gray-500" />
             <span>Add a new search</span>
           </Button>
+          {showSNPButton && (
+            <Button
+              className="mx-auto flex items-center font-medium leading-6 mt-2"
+              style={{ transform: "translateY(-10px) translateX(10px)" }}
+              onClick={() => setSnpSearchModalOpen(true)}
+              title="Search for samples within a given SNP distance of the inputted node"
+            >
+              SNP Distance Search
+            </Button>
+          )}
+          {showSNPButton && (
+            <SNPOutputModal
+              snpOutputModalOpen={snpSearchModalOpen}
+              setSnpOutputModalOpen={setSnpSearchModalOpen}
+            />
+          )}
         </div>
       </div>
       {selectedDetails.nodeDetails && (
