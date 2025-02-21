@@ -44,6 +44,15 @@ const sendStatusMessage = (status_obj) => {
   });
 };
 
+const askUserForProxy = () => {
+  return new Promise((resolve) => {
+    postMessage({
+      type: "proxy_prompt",
+      callback: (useProxy) => resolve(useProxy),
+    });
+  });
+};
+
 const waitForProcessedData = async () => {
   // check if processedUploadedData is defined, if not wait until it is
   if (processedUploadedData === undefined) {
@@ -210,13 +219,34 @@ onmessage = async (event) => {
     data.data.filename &&
     data.data.filename.includes("jsonl")
   ) {
-    processedUploadedData = await processJsonl(
-      data.data,
-      sendStatusMessage,
-      ReadableWebToNodeStream,
-      parser,
-      streamValues
-    );
+    try {
+      processedUploadedData = await processJsonl(
+        data.data,
+        sendStatusMessage,
+        ReadableWebToNodeStream,
+        parser,
+        streamValues
+      );
+    } catch (error) {
+      const useProxy = await askUserForProxy();
+      if (useProxy) {
+        const proxyData = { ...data.data };
+        if (proxyData.status === "url_supplied") {
+          proxyData.filename =
+            "http://proxy.taxonium.org/?url=" +
+            encodeURIComponent(proxyData.filename);
+        }
+        processedUploadedData = await processJsonl(
+          proxyData,
+          sendStatusMessage,
+          ReadableWebToNodeStream,
+          parser,
+          streamValues
+        );
+      } else {
+        throw error;
+      }
+    }
 
     console.log("processedUploadedData created");
   } else if (

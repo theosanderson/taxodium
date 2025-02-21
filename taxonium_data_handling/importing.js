@@ -240,9 +240,26 @@ export const processJsonl = async (
     try {
       response = await fetch(url);
     } catch (error) {
-      console.log("Fetch error", error);
-      sendStatusMessage({ error: `Fetch error: ${error}` });
-      return;
+      console.log("Initial fetch error", error);
+      // Ask user if they want to try proxy
+      const useProxy = window.confirm(
+        "Download failed. This might be due to CORS restrictions. Would you like to try downloading through a proxy?"
+      );
+
+      if (useProxy) {
+        try {
+          const proxyUrl =
+            "http://proxy.taxonium.org/?url=" + encodeURIComponent(url);
+          response = await fetch(proxyUrl);
+        } catch (proxyError) {
+          console.log("Proxy fetch error", proxyError);
+          sendStatusMessage({ error: `Proxy fetch error: ${proxyError}` });
+          return;
+        }
+      } else {
+        sendStatusMessage({ error: `Fetch error: ${error}` });
+        return;
+      }
     }
     console.log("ALL FINE", response);
     sendStatusMessage({ message: "Loading root genome" });

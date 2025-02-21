@@ -1,6 +1,7 @@
 import pako from "pako";
 import axios from "axios";
 import reduceMaxOrMin from "./reduceMaxOrMin";
+import { downloadWithProxy } from "./downloadWithProxy";
 import { kn_expand_node, kn_calxy } from "./jstree";
 
 const emptyList = [];
@@ -91,7 +92,7 @@ async function do_fetch(url, sendStatusMessage, whatIsBeingDownloaded) {
   // send progress on downloadProgress
 
   if (url.endsWith(".gz")) {
-    const response = await axios.get(url, {
+    const response = await downloadWithProxy(url, {
       responseType: "arraybuffer",
       onDownloadProgress: (progress) => {
         sendStatusMessage({

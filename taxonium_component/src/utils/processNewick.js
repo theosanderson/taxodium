@@ -9,6 +9,7 @@ import pako from "pako";
 import axios from "axios";
 import reduceMaxOrMin from "./reduceMaxOrMin";
 import nexusToNewick from "../utils/nexusToNewick.js";
+import { downloadWithProxy } from "./downloadWithProxy";
 const emptyList = [];
 
 async function do_fetch(url, sendStatusMessage, whatIsBeingDownloaded) {
@@ -18,7 +19,7 @@ async function do_fetch(url, sendStatusMessage, whatIsBeingDownloaded) {
   // send progress on downloadProgress
 
   if (url.endsWith(".gz")) {
-    const response = await axios.get(url, {
+    const response = await downloadWithProxy(url, {
       responseType: "arraybuffer",
       onDownloadProgress: (progress) => {
         sendStatusMessage({
@@ -34,7 +35,8 @@ async function do_fetch(url, sendStatusMessage, whatIsBeingDownloaded) {
     const text = new TextDecoder("utf-8").decode(inflated);
     return text;
   } else {
-    const response = await axios.get(url, {
+    const response = await downloadWithProxy(url, {
+      responseType: "json",
       onDownloadProgress: (progress) => {
         sendStatusMessage({
           message: "Downloading " + whatIsBeingDownloaded,
