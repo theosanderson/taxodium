@@ -24,9 +24,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
-  "dependencies": {},
   "devDependencies": {
-    "stream-json": "^1.8.0",
     "@fontsource/roboto": "^5.0.1",
     "@headlessui/react": "^1.7.17",
     "@jbrowse/core": "^2.5.0",
@@ -71,6 +69,7 @@
     "sb": "^7.0.14",
     "scale-color-perceptual": "^1.1.2",
     "storybook": "^7.0.14",
+    "stream-json": "^1.8.0",
     "tailwindcss": "^3.3.2",
     "taxonium_data_handling": "file:../taxonium_data_handling",
     "vite": "^4.3.2",

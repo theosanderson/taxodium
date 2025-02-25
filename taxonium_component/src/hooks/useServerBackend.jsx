@@ -35,13 +35,9 @@ function useServerBackend(backend_url, sid) {
           console.log("got data - yay", response.data);
           response.data.nodes.forEach((node) => {
             if (node.node_id === config.rootId) {
-              if (config.useHydratedMutations) {
-                node.mutations = config.rootMutations;
-              } else {
-                node.mutations = config.rootMutations.map(
-                  (x) => config.mutations[x]
-                );
-              }
+              // For the root node, leave mutations empty
+              // Root mutations are handled separately through config.rootMutations or config.rootSequences
+              node.mutations = [];
             } else {
               if (!config.useHydratedMutations) {
                 node.mutations = node.mutations.map(

@@ -127,6 +127,7 @@ const search = async (search, bounds) => {
     y_positions,
     node_to_mut,
     mutations,
+    rootSequences,
   } = processedUploadedData;
   const spec = JSON.parse(search);
   console.log(spec);
@@ -149,6 +150,7 @@ const search = async (search, bounds) => {
     node_to_mut,
     xType: xType,
     cache_helper,
+    rootSequences,
   });
 
   console.log("got search result", result);

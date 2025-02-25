@@ -22,19 +22,35 @@ const getNumericFilterFunction = (number_method, number_value) => {
   throw new Error("Invalid number_method: " + number_method);
 };
 
-const getRevertantMutationsSet = (all_data, node_to_mut, mutations) => {
-  const root = all_data.find((node) => node.node_id === node.parent_id);
-  const root_mutations = node_to_mut[root.node_id];
-  const all_genes = [...new Set(mutations.map((m) => m.gene))];
-  const gene_sequence = Object.fromEntries(all_genes.map((g) => [g, {}]));
+const getRevertantMutationsSet = (
+  all_data,
+  node_to_mut,
+  mutations,
+  rootSequences
+) => {
+  // Initialize gene_sequence - preferably from rootSequences, fallback to rootMutations
+  let gene_sequence;
 
-  root_mutations.forEach((mut) => {
-    const m = mutations[mut];
-    gene_sequence[m.gene][m.residue_pos] = m.new_residue;
-  });
+  if (rootSequences && rootSequences.aa) {
+    // Use rootSequences if available
+    gene_sequence = rootSequences.aa;
+  } else {
+    const root = all_data.find((node) => node.node_id === node.parent_id);
+    // Fall back to the old method using root mutations
+    const root_mutations = node_to_mut[root.node_id];
+    const all_genes = [...new Set(mutations.map((m) => m.gene))];
+    gene_sequence = Object.fromEntries(all_genes.map((g) => [g, {}]));
+
+    root_mutations.forEach((mut) => {
+      const m = mutations[mut];
+      gene_sequence[m.gene][m.residue_pos] = m.new_residue;
+    });
+  }
+
   const revertant_mutations = mutations.filter(
     (m) =>
       m.gene in gene_sequence &&
+      gene_sequence[m.gene] &&
       gene_sequence[m.gene][m.residue_pos] === m.new_residue &&
       m.new_residue !== m.previous_residue
   );
@@ -184,6 +200,7 @@ function searchFiltering({
   node_to_mut,
   all_data,
   cache_helper,
+  rootSequences,
 }) {
   const spec_copy = { ...spec };
   spec_copy.key = "cache";
@@ -206,6 +223,7 @@ function searchFiltering({
     node_to_mut,
     all_data,
     cache_helper,
+    rootSequences,
   });
 
   if (cache_helper && cache_helper.store_in_cache) {
@@ -224,6 +242,7 @@ function searchFilteringIfUncached({
   node_to_mut,
   all_data,
   cache_helper,
+  rootSequences,
 }) {
   if (spec.type == "boolean") {
     if (spec.boolean_method == "and") {
@@ -240,6 +259,7 @@ function searchFilteringIfUncached({
             node_to_mut: node_to_mut,
             all_data: all_data,
             cache_helper: cache_helper,
+            rootSequences: rootSequences,
           })
         );
         workingData = workingData.filter((n) => new_results.has(n));
@@ -259,6 +279,7 @@ function searchFilteringIfUncached({
           node_to_mut: node_to_mut,
           all_data: all_data,
           cache_helper: cache_helper,
+          rootSequences: rootSequences,
         });
         workingData = new Set([...workingData, ...results]);
       });
@@ -274,6 +295,7 @@ function searchFilteringIfUncached({
           node_to_mut: node_to_mut,
           all_data: all_data,
           cache_helper: cache_helper,
+          rootSequences: rootSequences,
         });
         negatives_set = new Set([...negatives_set, ...results]);
       });
@@ -360,7 +382,8 @@ function searchFilteringIfUncached({
       revertant_mutations_set = getRevertantMutationsSet(
         all_data,
         node_to_mut,
-        mutations
+        mutations,
+        rootSequences
       );
     }
 
@@ -379,7 +402,14 @@ function searchFilteringIfUncached({
       position: spec.position,
       new_residue: spec.new_residue,
     };
-    return filterByGenotype(data, genotype, mutations, node_to_mut, all_data);
+    return filterByGenotype(
+      data,
+      genotype,
+      mutations,
+      node_to_mut,
+      all_data,
+      rootSequences
+    );
   } else if (spec.method === "number") {
     if (spec.number == "") {
       return [];
@@ -410,6 +440,7 @@ function singleSearch({
   min_x,
   max_x,
   cache_helper,
+  rootSequences,
 }) {
   const text_spec = JSON.stringify(spec);
   const max_to_return = 10000;
@@ -531,7 +562,14 @@ const getTipAtts = (input, node_id, attribute) => {
   return allAtts;
 };
 
-const filterByGenotype = (data, genotype, mutations, node_to_mut, all_data) => {
+const filterByGenotype = (
+  data,
+  genotype,
+  mutations,
+  node_to_mut,
+  all_data,
+  rootSequences
+) => {
   const genotype_cache = {};
   const { gene, position, new_residue } = genotype;
 
@@ -592,6 +630,19 @@ const filterByGenotype = (data, genotype, mutations, node_to_mut, all_data) => {
         return false;
       }
       if (cur_node.parent_id === cur_node.node_id) {
+        // We've reached the root node
+        // Check if we have rootSequences data
+        if (
+          rootSequences &&
+          rootSequences.aa &&
+          rootSequences.aa[gene] &&
+          rootSequences.aa[gene][position] === new_residue
+        ) {
+          to_label.forEach((node_id) => {
+            genotype_cache[node_id] = true;
+          });
+          return true;
+        }
         break;
       }
       cur_node = all_data[cur_node.parent_id];

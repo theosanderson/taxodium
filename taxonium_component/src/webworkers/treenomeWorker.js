@@ -97,12 +97,10 @@ const computeVariationData = async (data, type, ntBounds, jobId) => {
 
   const preorder_nodes = pre_order(nodes);
   const root = preorder_nodes.find((id) => id === lookup[id].parent_id);
-  for (let mut of lookup[root].mutations) {
-    if (mut.gene === "nt") {
-      ref["nt"][mut.residue_pos] = mut.new_residue;
-    } else {
-      ref["aa"][mut.gene + ":" + mut.residue_pos] = mut.new_residue;
-    }
+
+  // Use rootSequences from config
+  if (data.data && data.data.config && data.data.config.rootSequences) {
+    ref = data.data.config.rootSequences;
   }
 
   const chunkSize = 10000;

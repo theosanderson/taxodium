@@ -228,6 +228,7 @@ app.get("/config", function (req, res) {
   config.rootMutations = config.useHydratedMutations
     ? []
     : processedData.rootMutations;
+  config.rootSequences = processedData.rootSequences;
   config.rootId = processedData.rootId;
 
   res.send(config);

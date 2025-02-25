@@ -106,10 +106,11 @@ function useLocalBackend(uploaded_data) {
         );
         receivedData.nodes.forEach((node) => {
           if (node.node_id === config.rootId) {
-            node.mutations = config.rootMutations.map(
-              (x) => config.mutations[x]
-            );
+            // For the root node, we leave mutations empty
+            // Root mutations are handled separately through config.rootMutations or config.rootSequences
+            node.mutations = [];
           } else {
+            // For other nodes, map mutation indices to actual mutation objects
             node.mutations = node.mutations.map(
               (mutation) => config.mutations[mutation]
             );

@@ -226,6 +226,7 @@ export async function processNewick(data, sendStatusMessage) {
     mutations: [],
     node_to_mut: {},
     rootMutations: [],
+    rootSequences: { nt: {}, aa: {} },
     rootId: 0,
     overwrite_config: { num_tips: total_tips, from_newick: true },
   };

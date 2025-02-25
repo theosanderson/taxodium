@@ -298,6 +298,29 @@ export const processJsonl = async (
   const rootMutations = root.mutations;
   root.mutations = [];
 
+  // Build rootSequences object from root mutations
+  const rootSequences = { nt: {}, aa: {} };
+  if (rootMutations && rootMutations.length > 0) {
+    // Group mutations by gene
+    rootMutations.forEach((mutIndex) => {
+      const mut = new_data.header.mutations
+        ? new_data.header.mutations[mutIndex]
+        : new_data.header.aa_mutations[mutIndex];
+
+      if (!mut) return;
+
+      if (mut.gene === "nt") {
+        rootSequences.nt[mut.residue_pos] = mut.new_residue;
+      } else {
+        // For amino acid mutations
+        if (!rootSequences.aa[mut.gene]) {
+          rootSequences.aa[mut.gene] = {};
+        }
+        rootSequences.aa[mut.gene][mut.residue_pos] = mut.new_residue;
+      }
+    });
+  }
+
   console.log("Creating output obj");
 
   const overwrite_config = new_data.header.config ? new_data.header.config : {};
@@ -315,6 +338,7 @@ export const processJsonl = async (
       : new_data.header.aa_mutations,
     node_to_mut: new_data.node_to_mut,
     rootMutations: rootMutations,
+    rootSequences: rootSequences,
     rootId: root.node_id,
     overwrite_config,
   };
@@ -336,6 +360,7 @@ export const generateConfig = (config, processedUploadedData) => {
     .sort();
 
   config.rootMutations = processedUploadedData.rootMutations;
+  config.rootSequences = processedUploadedData.rootSequences;
   config.rootId = processedUploadedData.rootId;
 
   config.name_accessor = "name";

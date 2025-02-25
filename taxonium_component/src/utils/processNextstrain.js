@@ -297,6 +297,7 @@ async function processJsTree(tree, data, config, sendStatusMessage) {
     mutations: [],
     node_to_mut: {},
     rootMutations: [],
+    rootSequences: { nt: {}, aa: {} },
     rootId: 0,
     overwrite_config: { ...config, num_tips: total_tips },
   };
